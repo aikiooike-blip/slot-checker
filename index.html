@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>設定判別ツール</title>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --border: #333;
+    --accent: #f0b429;
+    --accent2: #e05c2a;
+    --text: #f0f0f0;
+    --text2: #999;
+    --s1: #e74c3c;
+    --s2: #e67e22;
+    --s3: #f1c40f;
+    --s4: #2ecc71;
+    --s5: #3498db;
+    --s6: #9b59b6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; font-size: 14px; min-height: 100vh; }
+
+  header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 16px; text-align: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+  header h1 { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: 2px; }
+  header p { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  .container { max-width: 540px; margin: 0 auto; padding: 12px; }
+
+  .card { background: var(--surface); border-radius: 12px; padding: 14px; margin-bottom: 12px; border: 1px solid var(--border); }
+  .card-title { font-size: 12px; color: var(--accent); font-weight: 700; letter-spacing: 1px; margin-bottom: 10px; text-transform: uppercase; }
+
+  select, input[type="number"] {
+    background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px; width: 100%; font-size: 14px; outline: none;
+    -webkit-appearance: none; appearance: none;
+  }
+  select:focus, input:focus { border-color: var(--accent); }
+
+  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .row label { font-size: 12px; color: var(--text2); white-space: nowrap; min-width: 100px; }
+  .row input { flex: 1; text-align: center; }
+  .row .unit { font-size: 11px; color: var(--text2); white-space: nowrap; }
+  .slash { font-size: 16px; color: var(--text2); padding: 0 2px; }
+
+  .element-block { background: var(--surface2); border-radius: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); }
+  .element-name { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .element-desc { font-size: 11px; color: var(--text2); margin-bottom: 8px; }
+  .input-row { display: flex; gap: 6px; align-items: center; }
+  .input-row input { width: 80px; text-align: center; flex: none; }
+  .input-row span { color: var(--text2); font-size: 13px; }
+  .total-hint { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+  /* 結果 */
+  .result-block { margin-bottom: 6px; }
+  .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .setting-label { font-size: 13px; font-weight: 700; min-width: 52px; }
+  .pct-label { font-size: 13px; font-weight: 700; min-width: 52px; text-align: right; }
+  .bar-wrap { flex: 1; height: 22px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin: 0 8px; }
+  .bar { height: 100%; border-radius: 4px; transition: width 0.3s ease; }
+
+  .s1 { color: var(--s1); } .bar-s1 { background: var(--s1); }
+  .s2 { color: var(--s2); } .bar-s2 { background: var(--s2); }
+  .s3 { color: var(--s3); } .bar-s3 { background: var(--s3); }
+  .s4 { color: var(--s4); } .bar-s4 { background: var(--s4); }
+  .s5 { color: var(--s5); } .bar-s5 { background: var(--s5); }
+  .s6 { color: var(--s6); } .bar-s6 { background: var(--s6); }
+
+  .best-setting { text-align: center; padding: 14px; background: var(--surface2); border-radius: 10px; margin-bottom: 12px; border: 1px solid var(--border); }
+  .best-setting .label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+  .best-setting .value { font-size: 28px; font-weight: 800; }
+  .best-setting .sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  .ref-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 8px; }
+  .ref-table th { background: var(--surface2); padding: 5px 4px; text-align: center; color: var(--text2); }
+  .ref-table td { padding: 5px 4px; text-align: center; border-bottom: 1px solid var(--border); }
+
+  .tab-bar { display: flex; gap: 4px; margin-bottom: 12px; }
+  .tab { flex: 1; padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; font-size: 13px; background: var(--surface); border: 1px solid var(--border); color: var(--text2); transition: all 0.2s; }
+  .tab.active { background: var(--accent); color: #000; font-weight: 700; border-color: var(--accent); }
+
+  .no-data { text-align: center; color: var(--text2); padding: 20px; font-size: 13px; }
+
+  .reset-btn { width: 100%; padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text2); font-size: 14px; cursor: pointer; margin-top: 8px; }
+  .reset-btn:hover { background: var(--border); color: var(--text); }
+
+  .tip { font-size: 11px; color: var(--text2); background: var(--surface2); border-radius: 6px; padding: 8px 10px; margin-top: 8px; border-left: 3px solid var(--accent); }
+
+  /* パスワードモーダル */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:100; align-items:center; justify-content:center; }
+  .modal-overlay.active { display:flex; }
+  .modal-box { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px 20px; width:90%; max-width:360px; }
+  .modal-title { font-size:16px; font-weight:700; color:var(--accent); margin-bottom:6px; }
+  .modal-sub { font-size:12px; color:var(--text2); margin-bottom:16px; }
+  .modal-input { background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:12px; width:100%; font-size:15px; outline:none; letter-spacing:2px; }
+  .modal-input:focus { border-color:var(--accent); }
+  .modal-error { font-size:12px; color:var(--s1); margin-top:8px; min-height:18px; }
+  .modal-btn { width:100%; padding:13px; border:none; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer; margin-top:12px; }
+  .modal-btn-ok { background:var(--accent); color:#000; }
+  .modal-btn-cancel { background:var(--surface2); color:var(--text2); margin-top:6px; }
+  .lock-badge { font-size:11px; background:#333; color:var(--accent); border-radius:4px; padding:1px 5px; margin-left:4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎰 設定判別ツール</h1>
+  <p>各データを入力するとベイズ推定で設定確率をリアルタイム表示</p>
+</header>
+
+<!-- パスワードモーダル -->
+<div class="modal-overlay" id="pw-modal">
+  <div class="modal-box">
+    <div class="modal-title">🔒 パスワードを入力</div>
+    <div class="modal-sub" id="pw-modal-machine">この機種はnoteで販売中のパスワードが必要です</div>
+    <input class="modal-input" type="password" id="pw-input" placeholder="パスワード" autocomplete="off" onkeydown="if(event.key==='Enter')checkPw()">
+    <div class="modal-error" id="pw-error"></div>
+    <button class="modal-btn modal-btn-ok" onclick="checkPw()">✓ 解除する</button>
+    <button class="modal-btn modal-btn-cancel" onclick="closePwModal()">キャンセル</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 機種選択 -->
+  <div class="card">
+    <div class="card-title">🎮 機種選択</div>
+    <input type="text" id="machine-search" placeholder="🔍 機種名を検索..." oninput="filterMachines()" style="margin-bottom:8px">
+    <select id="machine-select">
+      <option value="">機種を選んでください</option>
+    </select>
+  </div>
+
+  <!-- タブ -->
+  <div class="tab-bar" id="tab-bar" style="display:none">
+    <div class="tab active" onclick="switchTab('input')">📝 入力</div>
+    <div class="tab" onclick="switchTab('result')">📊 結果</div>
+    <div class="tab" onclick="switchTab('ref')">📋 参考値</div>
+  </div>
+
+  <div id="tab-input">
+    <!-- 総ゲーム数 -->
+    <div class="card" id="games-card" style="display:none">
+      <div class="card-title">🎲 総ゲーム数</div>
+      <div class="row">
+        <input type="number" id="total-games" placeholder="例: 3000" min="0" oninput="recalc()">
+        <span class="unit">G</span>
+      </div>
+    </div>
+    <!-- 要素入力エリア -->
+    <div id="elements-area"></div>
+    <button class="reset-btn" id="reset-btn" style="display:none" onclick="resetAll()">🔄 データをリセット</button>
+  </div>
+
+  <div id="tab-result" style="display:none">
+    <div id="result-area" class="card">
+      <div class="no-data">機種を選択してデータを入力してください</div>
+    </div>
+  </div>
+
+  <div id="tab-ref" style="display:none">
+    <div class="card" id="ref-area">
+      <div class="no-data">機種を選択してください</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ───────────────────────────────────────────
+// 機種データベース
+// probs: [設定1, 設定2, 設定3, 設定4, 設定5, 設定6] の出現確率（1回あたり）
+// ───────────────────────────────────────────
+const MACHINES = [
+  {
+    id: "kabaneri_kaimon",
+    name: "スマスロ カバネリ 海門決戦",
+    locked: true,
+    // SHA-256ハッシュ。パスワードを変更するには下の「パスワード生成ツール」を使ってください
+    // 現在のパスワード: kabaneri2025 （noteで販売する際はこれを変更）
+    passwordHash: "f003e18e422372102cb6e86857e2ac924a9cd2967017119e73a166923e7946e3",
+    elements: [
+      // ── 数値判別（カウント系）──
+      { id: "bonus", name: "ボーナス初当たり", desc: "ボーナス回数", type: "count",
+        probs: [1/254.2, 1/242.3, 1/239.6, 1/214.0, 1/203.2, 1/195.1] },
+      { id: "bell", name: "共通13枚ベル（下段ベル）", desc: "下段ベル回数", type: "count",
+        probs: [1/121.1, 1/114.4, 1/112.8, 1/106.2, 1/104.2, 1/99.1] },
+      { id: "st", name: "ST確率", desc: "ST当選回数", type: "count",
+        probs: [1/422.5, 1/405.9, 1/398.7, 1/357.2, 1/332.6, 1/318.5] },
+      // ── 演出選択系（select型）──
+      { id: "trophy", name: "🏆 サミートロフィー", desc: "ST終了時・駿城ボーナス終了時", type: "select",
+        note: "出現率は低め。銅でも高設定の可能性あり",
+        options: [
+          { label: "🌈 虹（設定6濃厚）",        probs: [0.001, 0.001, 0.001, 0.001, 0.002, 0.30 ] },
+          { label: "🦒 キリン（設定5以上濃厚）", probs: [0.001, 0.001, 0.001, 0.001, 0.10,  0.18 ] },
+          { label: "🥇 金（設定4以上濃厚）",     probs: [0.001, 0.001, 0.001, 0.05,  0.08,  0.12 ] },
+          { label: "🥈 銀（設定3以上濃厚）",     probs: [0.001, 0.001, 0.03,  0.05,  0.07,  0.10 ] },
+          { label: "🥉 銅（設定2以上濃厚）",     probs: [0.001, 0.03,  0.03,  0.05,  0.06,  0.08 ] },
+          { label: "未出現 / スキップ",           probs: [1, 1, 1, 1, 1, 1] },
+        ]
+      },
+      { id: "voice", name: "🎤 技術介入ボイス", desc: "逆押しで青7サンド目を狙い確認", type: "select",
+        note: "ボイスなしは設定5以上濃厚🔥 LED発光パターンでも確認可能",
+        options: [
+          { label: "ボイスなし（設定5以上濃厚🔥）",              probs: [0.001, 0.001, 0.001, 0.001, 0.25,  0.50 ] },
+          { label: "景之「今年は最後かな」（高設定・強）",        probs: [0.001, 0.005, 0.005, 0.03,  0.10,  0.18 ] },
+          { label: "景之「私はヒトか、カバネか」（高設定・中）", probs: [0.005, 0.01,  0.01,  0.05,  0.10,  0.14 ] },
+          { label: "景之「なぜ言わなかった」（高設定・弱）",     probs: [0.02,  0.03,  0.03,  0.08,  0.10,  0.12 ] },
+          { label: "無名「普通じゃないね」（設定2以上濃厚）",    probs: [0.001, 0.08,  0.08,  0.10,  0.10,  0.12 ] },
+          { label: "女性キャラ（偶数設定示唆）",                 probs: [0.10,  0.25,  0.08,  0.25,  0.08,  0.25 ] },
+          { label: "男性キャラ（奇数設定示唆）",                 probs: [0.10,  0.06,  0.25,  0.06,  0.25,  0.06 ] },
+          { label: "未実施 / スキップ",                          probs: [1, 1, 1, 1, 1, 1] },
+        ]
+      },
+      { id: "chara", name: "🎭 キャラ紹介（ボーナス中）", desc: "カバネリボーナス中のキャラ演出", type: "select",
+        note: "美馬出現は設定4以上の強サイン。設定1のみ男女比率が均等",
+        options: [
+          { label: "美馬（設定4以上濃厚！）",     probs: [0.001, 0.001, 0.001, 0.12,  0.18,  0.22 ] },
+          { label: "女性キャラ（偶数示唆）",       probs: [0.50,  0.65,  0.25,  0.65,  0.25,  0.65 ] },
+          { label: "男性キャラ（奇数3・5示唆）",  probs: [0.50,  0.25,  0.65,  0.25,  0.65,  0.25 ] },
+          { label: "未確認 / スキップ",            probs: [1, 1, 1, 1, 1, 1] },
+        ]
+      },
+      { id: "attack", name: "💥 カバネリアタック上乗せ", desc: "PUSH連打時の上乗せ枚数（一瞬で消えるので注意）", type: "select",
+        note: "+66は設定6濃厚。PUSHボタンがバイブするのが目印",
+        options: [
+          { label: "+66（設定6濃厚）",     probs: [0.001, 0.001, 0.001, 0.001, 0.001, 0.15 ] },
+          { label: "+55（設定5以上濃厚）", probs: [0.001, 0.001, 0.001, 0.001, 0.10,  0.15 ] },
+          { label: "+44（設定4以上濃厚）", probs: [0.001, 0.001, 0.001, 0.08,  0.10,  0.15 ] },
+          { label: "通常 / 未確認",        probs: [1, 1, 1, 1, 1, 1] },
+        ]
+      },
+      { id: "medals", name: "💰 獲得枚数表示", desc: "AT終了時に表示される枚数", type: "select",
+        note: "",
+        options: [
+          { label: "666 OVER（設定6濃厚）",     probs: [0.001, 0.001, 0.001, 0.001, 0.001, 0.20 ] },
+          { label: "456 OVER（設定4以上濃厚）", probs: [0.001, 0.001, 0.001, 0.10,  0.12,  0.20 ] },
+          { label: "通常 / 未確認",             probs: [1, 1, 1, 1, 1, 1] },
+        ]
+      },
+    ]
+  },
+  {
+    id: "hokuto_tensei",
+    name: "スマスロ北斗転生",
+    locked: true,
+    // 現在のパスワード: hokuto2025（noteで販売する際は?devツールで変更）
+    passwordHash: "10081d94084965db8f76e195eddf422dc0740f6d7722bade6acf396e3e2c3d70",
+    elements: [
+      // ── 896あべしゾーン ──
+      { id: "zone896", name: "896あべし当選率", type: "count",
+        desc: "896あべしゾーン到達回数を分母、当選回数を入力",
+        probs: [0.15, 0.17, 0.20, 0.23, 0.27, 0.30],
+        hasOwnTotal: true,
+        note: "低設定 約15% ／ 高設定 約30%（2倍差）",
+      },
+      // ── 577〜768あべしゾーン（最強設定差）──
+      { id: "zone577", name: "577〜768あべし当選率", type: "count",
+        desc: "577〜768あべしゾーン到達回数を分母、当選回数を入力",
+        probs: [0.01, 0.02, 0.04, 0.06, 0.07, 0.09],
+        hasOwnTotal: true,
+        note: "低設定 約1% ／ 高設定 約9%（★最強9倍差）",
+      },
+      // ── 天破の刻 ──
+      { id: "tenpaku", name: "天破の刻 出現率", type: "count",
+        desc: "天破の刻 当選回数（分母は総ゲーム数）",
+        probs: [1/110, 1/105, 1/100, 1/93, 1/86, 1/80],
+      },
+      // ── 上位AT引き戻し率 ──
+      { id: "at_hikikoshi", name: "上位AT引き戻し率", type: "count",
+        desc: "上位AT突入回数を分母、引き戻し回数を入力",
+        probs: [0.13, 0.17, 0.21, 0.26, 0.31, 0.36],
+        hasOwnTotal: true,
+        note: "低設定 約13% ／ 高設定 約36%（3倍差）",
+      },
+      // ── 天撃成功率 ──
+      { id: "tengeki", name: "天撃成功率", type: "count",
+        desc: "天撃挑戦回数を分母、成功回数を入力",
+        probs: [0.51, 0.53, 0.55, 0.57, 0.60, 0.62],
+        hasOwnTotal: true,
+        note: "低設定 約51% ／ 高設定 約62%",
+      },
+      // ── 筐体上部ランプ ──
+      { id: "lamp", name: "筐体上部ランプ 水色以上点灯率", type: "count",
+        desc: "総点灯回数を分母、水色以上の回数を入力",
+        probs: [0.15, 0.16, 0.17, 0.19, 0.21, 0.22],
+        hasOwnTotal: true,
+        note: "低設定 約15% ／ 高設定 約22%",
+      },
+    ]
+  },
+  // ── 以下、共通パスワード: slot2025 ──────────────────────────────
+  {
+    id: "karakuri",
+    name: "からくりサーカス",
+    locked: true,
+    passwordHash: "1bbfb75b83dd0186f01ba4ab0bf9ee8a49baa895fff27a4aad583b45f2d2ff2b",
+    elements: [
+      { id: "at_hatu_karakuri", name: "AT初当たり確率", type: "count",
+        desc: "AT当選回数（分母は総ゲーム数）",
+        probs: [1/564, 1/543, 1/510, 1/469, 1/451, 1/447],
+        note: "設定1 約1/564 ／ 設定6 約1/447",
+      },
+      { id: "maku", name: "幕間チャンス突入率", type: "count",
+        desc: "幕間チャンス当選回数（分母は総ゲーム数）※朝イチ1回目は除外推奨",
+        probs: [1/3000, 1/2500, 1/2000, 1/1600, 1/1200, 1/1000],
+        note: "設定1 約1/3000 ／ 設定6 約1/1000（3倍差）",
+      },
+      { id: "chokugeki", name: "直撃AT率", type: "count",
+        desc: "AT総当選回数を分母、直撃AT回数を入力",
+        probs: [0.03, 0.05, 0.08, 0.11, 0.15, 0.18],
+        hasOwnTotal: true,
+        note: "設定6では全体の15〜20%が直撃AT ※朝イチ1回目は除外推奨",
+      },
+      { id: "olympia_up", name: "踊れ!オリンピア中 上乗せ示唆", type: "select",
+        desc: "上乗せ枚数表示の数字",
+        options: [
+          { label: "+6（設定6確定）",    probs: [0.001, 0.001, 0.001, 0.001, 0.001, 0.05] },
+          { label: "+4（設定4以上確定）", probs: [0.001, 0.001, 0.001, 0.05,  0.05,  0.03] },
+          { label: "+20（設定2以上）",    probs: [0.001, 0.05,  0.05,  0.03,  0.03,  0.03] },
+          { label: "未確認 / スキップ",   probs: [1, 1, 1, 1, 1, 1] },
+        ],
+      },
+    ]
+  },
+  {
+    id: "valvrave",
+    name: "ヴァルヴレイヴ",
+    locked: true,
+    passwordHash: "1bbfb75b83dd0186f01ba4ab0bf9ee8a49baa895fff27a4aad583b45f2d2ff2b",
+    elements: [
+      { id: "vvv_bonus", name: "ボーナス初当たり確率", type: "count",
+        desc: "ボーナス当選回数（分母は総ゲーム数）",
+        probs: [1/519, 1/516, 1/514, 1/507, 1/499, 1/490],
+        note: "設定1 約1/519 ／ 設定6 約1/490",
+      },
+      { id: "vvv_cz", name: "CZ「共闘Vチャレンジ」出現率", type: "count",
+        desc: "CZ当選回数（分母は総ゲーム数）",
+        probs: [1/277, 1/275, 1/274, 1/269, 1/264, 1/258],
+        note: "設定1 約1/277 ／ 設定6 約1/258",
+      },
+      { id: "harakiri", name: "ハラキリドライブ発生率", type: "count",
+        desc: "AT総回数を分母、ドライブ（約350枚以上）回数を入力",
+        probs: [0.05, 0.06, 0.07, 0.09, 0.17, 0.25],
+        hasOwnTotal: true,
+        note: "設定1-4 約10%未満 ／ 設定5 約17% ／ 設定6 約25%",
+      },
+      { id: "marie", name: "BIG開始時マリエ覚醒率", type: "count",
+        desc: "BIG回数を分母、マリエ覚醒発生回数を入力",
+        probs: [0.05, 0.07, 0.08, 0.10, 0.11, 0.13],
+        hasOwnTotal: true,
+        note: "設定1 約5% ／ 設定6 約13%",
+      },
+    ]
+  },
+  {
+    id: "kaguya",
+    name: "かぐや様",
+    locked: true,
+    passwordHash: "1bbfb75b83dd0186f01ba4ab0bf9ee8a49baa895fff27a4aad583b45f2d2ff2b",
+    elements: [
+      { id: "sbb_ratio", name: "SBB・EX比率", type: "count",
+        desc: "総ボーナス回数を分母、SBB＋EX回数を入力",
+        probs: [0.20, 0.25, 0.30, 0.38, 0.45, 0.50],
+        hasOwnTotal: true,
+        note: "低設定 RB:SBB/EX≒4:1（20%） ／ 高設定 ≒1:1（50%）",
+      },
+      { id: "sbb_hatu", name: "SBB・EX初当たり確率", type: "count",
+        desc: "SBB・EX当選回数（分母は総ゲーム数）",
+        probs: [1/38000, 1/28000, 1/20000, 1/15000, 1/11000, 1/9000],
+        note: "設定1 約1/38000 ／ 設定6 約1/9000",
+      },
+      { id: "chokugeki_kaguya", name: "通常時ボーナス直撃確率", type: "count",
+        desc: "通常時ボーナス直撃回数（分母は総ゲーム数）",
+        probs: [1/6000, 1/5500, 1/5000, 1/4500, 1/4000, 1/3500],
+        note: "設定1 約1/6000 ／ 設定6 約1/3500",
+      },
+    ]
+  },
+  {
+    id: "hokuto_sammy",
+    name: "北斗の拳（Sammy）",
+    locked: true,
+    passwordHash: "1bbfb75b83dd0186f01ba4ab0bf9ee8a49baa895fff27a4aad583b45f2d2ff2b",
+    elements: [
+      { id: "hokuto_at_hatu", name: "AT初当たり確率", type: "count",
+        desc: "AT当選回数（分母は総ゲーム数）",
+        probs: [1/383.4, 1/370.5, 1/330, 1/297.8, 1/258.7, 1/235.1],
+        note: "設定1 約1/383 ／ 設定6 約1/235",
+      },
+      { id: "bell_hokuto", name: "共通ベル確率", type: "count",
+        desc: "ベル回数（分母は総ゲーム数）※小役パート30G/無想転生チャンス/ボーナス中でカウント",
+        probs: [1/100, 1/94, 1/88, 1/82, 1/76, 1/70],
+        note: "設定1 約1/100 ／ 設定6 約1/70",
+      },
+      { id: "amiba", name: "AT終了時アミバボイス率", type: "count",
+        desc: "AT終了回数を分母、アミバ発生回数を入力",
+        probs: [0.0122, 0.020, 0.030, 0.040, 0.055, 0.0717],
+        hasOwnTotal: true,
+        note: "設定1 約1.22% ／ 設定6 約7.17%（★6倍差）",
+      },
+      { id: "bat_rin", name: "AT終了時バット/リンボイス率", type: "count",
+        desc: "AT終了回数を分母、バット/リン発生回数を入力",
+        probs: [0.85, 0.82, 0.79, 0.76, 0.73, 0.70],
+        hasOwnTotal: true,
+        note: "設定1 約85% ／ 設定6 約70%（低いほど高設定）",
+      },
+      { id: "weak_suika_hokuto", name: "弱スイカ確率", type: "count",
+        desc: "弱スイカ回数（分母は総ゲーム数）",
+        probs: [1/109.0, 1/106, 1/103, 1/100, 1/99, 1/98.3],
+        note: "設定1 約1/109 ／ 設定6 約1/98.3",
+      },
+      { id: "strong_suika_hokuto", name: "強スイカA確率", type: "count",
+        desc: "強スイカA回数（分母は総ゲーム数）",
+        probs: [1/546.1, 1/520, 1/495, 1/468, 1/445, 1/425.6],
+        note: "設定1 約1/546 ／ 設定6 約1/425.6",
+      },
+      { id: "middle_cherry_hokuto", name: "中段チェリーA確率", type: "count",
+        desc: "中段チェリーA回数（分母は総ゲーム数）",
+        probs: [1/260.1, 1/252, 1/245, 1/238, 1/234, 1/230.8],
+        note: "設定1 約1/260 ／ 設定6 約1/230.8",
+      },
+    ]
+  },
+  {
+    id: "monkey_turn",
+    name: "スマスロ モンキーターンV",
+    locked: true,
+    passwordHash: "1bbfb75b83dd0186f01ba4ab0bf9ee8a49baa895fff27a4aad583b45f2d2ff2b",
+    elements: [
+      { id: "five_medal", name: "5枚役出現率【最重要】", type: "count",
+        desc: "5枚役回数（分母は総ゲーム数）通常時・AT中すべてでカウント",
+        probs: [1/35, 1/33, 1/30, 1/28, 1/25, 1/22],
+        note: "設定1 約1/35 ／ 設定6 約1/22（最重要設定差）",
+      },
+      { id: "pt222", name: "222pt選択率", type: "count",
+        desc: "激走ポイント選択総回数を分母、222pt選択回数を入力",
+        probs: [0.20, 0.25, 0.30, 0.38, 0.45, 0.50],
+        hasOwnTotal: true,
+        note: "設定5・6 約50%で222ptを選択",
+      },
+      { id: "gamou", name: "ライバルモード 蒲生選択率", type: "count",
+        desc: "ライバルモード総発動回数を分母、蒲生選択回数を入力",
+        probs: [0.078, 0.090, 0.100, 0.115, 0.135, 0.156],
+        hasOwnTotal: true,
+        note: "設定差 約7.8%〜15.6%（約2倍）",
+      },
+      { id: "3cycle", name: "3周期超え率", type: "count",
+        desc: "初当たり回数を分母、3周期超えた回数を入力",
+        probs: [0.40, 0.35, 0.28, 0.20, 0.12, 0.08],
+        hasOwnTotal: true,
+        note: "設定5・6は10%未満しか3周期を超えない（低いほど高設定）",
+      },
+      { id: "strong_rare_at", name: "強レア小役からのAT直撃率", type: "count",
+        desc: "強チェリー等の強レア小役回数を分母、AT直撃回数を入力",
+        probs: [0.004, 0.012, 0.015, 0.020, 0.039, 0.063],
+        hasOwnTotal: true,
+        note: "設定1 約0.4% ／ 設定6 約6.3%（最大16倍差）",
+      },
+      { id: "black_medal", name: "黒メダル出現率", type: "count",
+        desc: "AT終了回数を分母、黒メダル出現回数を入力",
+        probs: [0.013, 0.015, 0.025, 0.040, 0.045, 0.045],
+        hasOwnTotal: true,
+        note: "設定1 約1.3% ／ 設定4以上 約4〜4.5%",
+      },
+      { id: "ex_item", name: "激走チャージ中EXアイテム獲得率", type: "count",
+        desc: "ボート・弱チェリー時の激走チャージ回数を分母、EXアイテム獲得回数を入力",
+        probs: [0.250, 0.262, 0.290, 0.328, 0.391, 0.430],
+        hasOwnTotal: true,
+        note: "設定1 約25% ／ 設定6 約43%",
+      },
+    ]
+  },
+  {
+    id: "god_eater",
+    name: "ゴッドイーター",
+    locked: true,
+    passwordHash: "1bbfb75b83dd0186f01ba4ab0bf9ee8a49baa895fff27a4aad583b45f2d2ff2b",
+    elements: [
+      { id: "at_hatu_ge", name: "AT初当たり確率", type: "count",
+        desc: "AT当選回数（分母は総ゲーム数）",
+        probs: [1/351.9, 1/338, 1/325, 1/313, 1/300, 1/290.3],
+        note: "設定1 約1/352 ／ 設定6 約1/290",
+      },
+      { id: "cz_all_ge", name: "CZ合算出現率", type: "count",
+        desc: "CZ当選回数（分母は総ゲーム数）",
+        probs: [1/392, 1/372, 1/353, 1/336, 1/323, 1/310.6],
+        note: "設定1 約1/392 ／ 設定6 約1/310.6",
+      },
+      { id: "ren_voice", name: "ストーリー終了ボイス 強示唆（レン）", type: "count",
+        desc: "ストーリー終了総回数を分母、レン出現回数を入力",
+        probs: [0.013, 0.020, 0.030, 0.040, 0.055, 0.070],
+        hasOwnTotal: true,
+        note: "設定1 約1.3% ／ 設定6 約7%（★重要）",
+      },
+      { id: "soma_voice", name: "ストーリー終了ボイス 弱示唆（ソーマ）", type: "count",
+        desc: "ストーリー終了総回数を分母、ソーマ出現回数を入力",
+        probs: [0.10, 0.11, 0.12, 0.13, 0.15, 0.17],
+        hasOwnTotal: true,
+        note: "設定1 約10% ／ 設定6 約17%",
+      },
+      { id: "zone200", name: "200Gゾーン当選率", type: "count",
+        desc: "200Gゾーン到達回数を分母、当選回数を入力",
+        probs: [0.07, 0.08, 0.09, 0.10, 0.12, 0.14],
+        hasOwnTotal: true,
+        note: "低設定 約7% ／ 高設定 約14%（2倍差）",
+      },
+      { id: "zone450", name: "450Gゾーン当選率", type: "count",
+        desc: "450Gゾーン到達回数を分母、当選回数を入力",
+        probs: [0.09, 0.10, 0.11, 0.12, 0.13, 0.15],
+        hasOwnTotal: true,
+        note: "低設定 約9% ／ 高設定 約15%",
+      },
+      { id: "strong_cherry_at", name: "強チェリーAT直撃率", type: "count",
+        desc: "強チェリー回数を分母、AT直撃回数を入力",
+        probs: [0.004, 0.010, 0.020, 0.030, 0.045, 0.059],
+        hasOwnTotal: true,
+        note: "設定1 約0.4% ／ 設定6 約5.9%（出たら高設定濃厚）",
+      },
+      { id: "chance_cz", name: "チャンス目CZ当選率", type: "count",
+        desc: "チャンス目回数を分母、CZ当選回数を入力",
+        probs: [0.158, 0.173, 0.188, 0.205, 0.225, 0.249],
+        hasOwnTotal: true,
+        note: "設定1 約15.8% ／ 設定6 約24.9%",
+      },
+      { id: "weak_cz_ge", name: "弱チェリー/スイカ→CZ突入率", type: "count",
+        desc: "弱チェリー+スイカ合算回数を分母、CZ突入回数を入力",
+        probs: [0.002, 0.003, 0.005, 0.007, 0.009, 0.012],
+        hasOwnTotal: true,
+        note: "設定1 約0.2% ／ 設定6 約1.2%（6倍差）",
+      },
+      { id: "rendan_ge", name: "連打上乗せ枚数示唆", type: "select",
+        desc: "AT中連打上乗せで表示された枚数",
+        options: [
+          { label: "+66（設定6確定）",    probs: [0.001, 0.001, 0.001, 0.001, 0.001, 0.15] },
+          { label: "+55（設定5以上確定）", probs: [0.001, 0.001, 0.001, 0.001, 0.15,  0.10] },
+          { label: "+44（設定4以上確定）", probs: [0.001, 0.001, 0.001, 0.15,  0.10,  0.08] },
+          { label: "未確認 / スキップ",   probs: [1, 1, 1, 1, 1, 1] },
+        ],
+      },
+    ]
+  },
+  {
+    id: "blackjack",
+    name: "スマスロ ブラックジャック",
+    locked: true,
+    passwordHash: "1bbfb75b83dd0186f01ba4ab0bf9ee8a49baa895fff27a4aad583b45f2d2ff2b",
+    elements: [
+      { id: "bonus_hatu_bj", name: "ボーナス初当たり確率", type: "count",
+        desc: "ボーナス当選回数（分母は総ゲーム数）",
+        probs: [1/241.7, 1/228, 1/215, 1/203, 1/191, 1/181.3],
+        note: "設定1 約1/241.7 ／ 設定6 約1/181.3",
+      },
+      { id: "naname_suika", name: "斜めスイカ確率", type: "count",
+        desc: "斜めスイカ回数（分母は総ゲーム数）",
+        probs: [1/99.9, 1/96, 1/92, 1/89, 1/86, 1/83.9],
+        note: "設定1 約1/99.9 ／ 設定6 約1/83.9",
+      },
+      { id: "mint_card", name: "JAC中 ミント〜リナカード出現率", type: "count",
+        desc: "JAC回数を分母、ミント〜リナカード出現回数を入力",
+        probs: [0.10, 0.11, 0.12, 0.13, 0.14, 0.15],
+        hasOwnTotal: true,
+        note: "低設定 約10% ／ 高設定 約15%",
+      },
+      { id: "chance_bonus", name: "チャンス目 ボーナス高確移行率", type: "count",
+        desc: "チャンス目回数を分母、ボーナス高確移行回数を入力",
+        probs: [0.40, 0.44, 0.48, 0.52, 0.56, 0.60],
+        hasOwnTotal: true,
+        note: "設定1 約40% ／ 設定6 約60%",
+      },
+      { id: "rio_card", name: "ボーナス終了 リオカード出現率", type: "count",
+        desc: "ボーナス終了回数を分母、リオカード出現回数を入力",
+        probs: [0.05, 0.06, 0.07, 0.08, 0.09, 0.10],
+        hasOwnTotal: true,
+        note: "設定1 約5% ／ 設定6 約10%",
+      },
+      { id: "koukaku_bj", name: "ボーナス高確移行率（通常時）", type: "count",
+        desc: "通常時の規定G数到達回数を分母、高確移行回数を入力",
+        probs: [1/114.7, 1/110, 1/105, 1/100, 1/95, 1/90.3],
+        note: "設定1 約1/114.7 ／ 設定6 約1/90.3",
+      },
+      { id: "chance_chokugeki_bj", name: "チャンス目 ボーナス直撃率", type: "count",
+        desc: "チャンス目回数を分母、ボーナス直撃回数を入力",
+        probs: [0.050, 0.055, 0.060, 0.065, 0.071, 0.078],
+        hasOwnTotal: true,
+        note: "設定1 約5.0% ／ 設定6 約7.8%",
+      },
+      { id: "suika_st_bj", name: "斜めスイカ ST中直撃率", type: "count",
+        desc: "ストックタイム中の斜めスイカ回数を分母、直撃回数を入力",
+        probs: [0.004, 0.007, 0.009, 0.011, 0.013, 0.016],
+        hasOwnTotal: true,
+        note: "設定1 約0.4% ／ 設定6 約1.6%（4倍差）",
+      },
+      { id: "100g_koukaku_bj", name: "100G到達時 高確移行率", type: "count",
+        desc: "100G到達回数を分母、高確移行回数を入力",
+        probs: [0.152, 0.163, 0.177, 0.195, 0.214, 0.238],
+        hasOwnTotal: true,
+        note: "設定1 約15.2% ／ 設定6 約23.8%",
+      },
+    ]
+  },
+  {
+    id: "iza_bancho",
+    name: "いざ番長",
+    locked: true,
+    passwordHash: "1bbfb75b83dd0186f01ba4ab0bf9ee8a49baa895fff27a4aad583b45f2d2ff2b",
+    elements: [
+      { id: "at_hatu_bancho", name: "初当たり合算確率", type: "count",
+        desc: "初当選回数（分母は総ゲーム数）",
+        probs: [1/386.9, 1/368.5, 1/375.8, 1/332.4, 1/351.6, 1/312.1],
+        note: "設定1 約1/387 ／ 設定6 約1/312（設定3が設定2より重い点に注意）",
+      },
+      { id: "bell_bancho", name: "共通10枚ベル確率", type: "count",
+        desc: "ベル回数（分母は総ゲーム数）",
+        probs: [1/75, 1/72, 1/69, 1/66, 1/63, 1/60],
+        note: "設定1 約1/75 ／ 設定6 約1/60",
+      },
+      { id: "hikikoshi", name: "AT引き戻し割合", type: "count",
+        desc: "AT終了回数を分母、引き戻し回数を入力",
+        probs: [0.05, 0.07, 0.09, 0.11, 0.13, 0.15],
+        hasOwnTotal: true,
+        note: "設定1 約5% ／ 設定6 約15%（3倍差）",
+      },
+      { id: "shogun", name: "討伐報酬 将軍あり率", type: "count",
+        desc: "討伐報酬開始回数を分母、将軍あり回数を入力",
+        probs: [0.333, 0.38, 0.43, 0.48, 0.565, 0.60],
+        hasOwnTotal: true,
+        note: "設定1 将軍なし:あり=1:0.5（33%） ／ 設定5 1:1.3（57%）",
+      },
+    ]
+  },
+  {
+    id: "toloveru",
+    name: "ToLOVEる",
+    locked: true,
+    passwordHash: "1bbfb75b83dd0186f01ba4ab0bf9ee8a49baa895fff27a4aad583b45f2d2ff2b",
+    elements: [
+      { id: "zone650", name: "650Gゾーン当選率", type: "count",
+        desc: "650Gゾーン到達回数を分母、当選回数を入力",
+        probs: [0.40, 0.45, 0.52, 0.60, 0.68, 0.75],
+        hasOwnTotal: true,
+        note: "設定6 常に約75%（最重要ゾーン）",
+      },
+      { id: "zone250", name: "250Gゾーン当選率（駆け抜け後）", type: "count",
+        desc: "250Gゾーン到達回数を分母、当選回数を入力",
+        probs: [0.20, 0.23, 0.27, 0.31, 0.36, 0.40],
+        hasOwnTotal: true,
+        note: "設定6 約40%",
+      },
+      { id: "harem_mode", name: "上位ST ハーレムモード当選率", type: "count",
+        desc: "3連目ボーナス当選回数を分母、ハーレムモード当選回数を入力",
+        probs: [0.34, 0.28, 0.22, 0.16, 0.10, 0.05],
+        hasOwnTotal: true,
+        note: "低設定 約34% ／ 高設定 約5%（★低いほど高設定）",
+      },
+      { id: "whisper_toloveru", name: "ハーレムモード中 ウィスパー演出選択率", type: "count",
+        desc: "ハーレムモード開始回数を分母、ウィスパー演出選択回数を入力",
+        probs: [0.025, 0.031, 0.036, 0.060, 0.071, 0.119],
+        hasOwnTotal: true,
+        note: "設定2 約3.1% → 設定6 約11.9%（★重要設定差）※本機は設定1なし",
+      },
+      { id: "ai_rush_toloveru", name: "ハーレムモード中 愛すぷRUSH選択率", type: "count",
+        desc: "ハーレムモード開始回数を分母、愛すぷRUSH選択回数を入力",
+        probs: [0.970, 0.962, 0.957, 0.933, 0.922, 0.874],
+        hasOwnTotal: true,
+        note: "設定2 約96.2% → 設定6 約87.4%（低いほど高設定）",
+      },
+    ]
+  },
+  {
+    id: "tokyo_ghoul",
+    name: "東京喰種",
+    locked: true,
+    passwordHash: "1bbfb75b83dd0186f01ba4ab0bf9ee8a49baa895fff27a4aad583b45f2d2ff2b",
+    elements: [
+      { id: "at_hatu_ghoul", name: "AT初当たり確率", type: "count",
+        desc: "AT当選回数（分母は総ゲーム数）",
+        probs: [1/394.4, 1/375, 1/355, 1/330, 1/295, 1/261.3],
+        note: "設定1 約1/394 ／ 設定6 約1/261",
+      },
+      { id: "cz101", name: "CZゾーン当選率 101〜150G", type: "count",
+        desc: "101〜150G到達回数を分母、当選回数を入力",
+        probs: [0.29, 0.30, 0.31, 0.33, 0.36, 0.38],
+        hasOwnTotal: true,
+        note: "低設定 約29% ／ 高設定 約38%",
+      },
+      { id: "cz301", name: "CZゾーン当選率 301〜350G", type: "count",
+        desc: "301〜350G到達回数を分母、当選回数を入力",
+        probs: [0.27, 0.29, 0.31, 0.33, 0.36, 0.38],
+        hasOwnTotal: true,
+        note: "低設定 約27% ／ 高設定 約38%",
+      },
+      { id: "at_end_weak", name: "AT終了画面 高設定示唆弱", type: "count",
+        desc: "AT終了回数を分母、弱示唆出現回数を入力",
+        probs: [0.02, 0.02, 0.02, 0.08, 0.08, 0.08],
+        hasOwnTotal: true,
+        note: "設定1〜3 約2% ／ 設定4〜6 約8%",
+      },
+      { id: "at_end_strong", name: "AT終了画面 高設定示唆強", type: "count",
+        desc: "AT終了回数を分母、強示唆出現回数を入力",
+        probs: [0.01, 0.01, 0.01, 0.05, 0.05, 0.05],
+        hasOwnTotal: true,
+        note: "設定1〜3 約1% ／ 設定4〜6 約5%",
+      },
+      { id: "red_card", name: "エンディングカード赤出現率", type: "count",
+        desc: "エンディング中の出現カード数を分母、赤カード出現回数を入力",
+        probs: [0.04, 0.06, 0.09, 0.12, 0.16, 0.20],
+        hasOwnTotal: true,
+        note: "低設定 約4% ／ 設定6 約20%（5倍差）",
+      },
+      { id: "tose_riyo", name: "大喰いの利世 出現率", type: "count",
+        desc: "大喰いの利世 出現回数（分母は総ゲーム数）",
+        probs: [1/2000, 1/1800, 1/1600, 1/1400, 1/1200, 1/1000],
+        note: "設定1 約1/2000 ／ 設定6 約1/1000",
+      },
+      { id: "ep_bonus", name: "エピソードボーナス出現率", type: "count",
+        desc: "エピソードボーナス出現回数（分母は総ゲーム数）",
+        probs: [1/6600, 1/5500, 1/4500, 1/3800, 1/3100, 1/2500],
+        note: "設定1 約1/6600 ／ 設定6 約1/2500",
+      },
+      { id: "at_hiki_ghoul", name: "AT引き戻し率", type: "count",
+        desc: "AT終了回数を分母、引き戻し回数を入力",
+        probs: [0.08, 0.09, 0.10, 0.11, 0.12, 0.14],
+        hasOwnTotal: true,
+        note: "低設定 約8% ／ 高設定 約14%",
+      },
+      { id: "100g_win_ghoul", name: "100G規定ゲーム当選率", type: "count",
+        desc: "100G到達回数を分母、当選回数を入力",
+        probs: [0.1958, 0.22, 0.25, 0.28, 0.32, 0.3601],
+        hasOwnTotal: true,
+        note: "設定1 約19.6% ／ 設定6 約36%",
+      },
+      { id: "at_direct_ghoul", name: "AT直撃確率", type: "count",
+        desc: "AT直撃当選回数（分母は総ゲーム数）",
+        probs: [1/28460, 1/22000, 1/17000, 1/13000, 1/9500, 1/7036.8],
+        note: "設定1 約1/28460 ／ 設定6 約1/7036（4倍差）",
+      },
+    ]
+  },
+  {
+    id: "custom",
+    name: "カスタム（自分で設定）",
+    elements: []
+  }
+];
+
+let currentMachine = null;
+let customElements = [];
+// セッション中に解除済みの機種IDを管理
+const unlockedMachines = new Set();
+// パスワード確認待ちの機種ID
+let pendingMachineId = null;
+
+// ───────────────────────────────────────────
+// SHA-256 ハッシュ計算（Web Crypto API）
+// ───────────────────────────────────────────
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ───────────────────────────────────────────
+// 開発者モード（URLに ?dev を付けると有効）
+// 参考値タブ表示・パスワード生成ツール利用可能
+// ───────────────────────────────────────────
+const isDev = location.search.includes('dev');
+
+function initDevTool() {
+  if (!isDev) return;
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;bottom:12px;right:12px;background:#1a1a2e;border:1px solid #555;border-radius:10px;padding:12px;z-index:999;width:260px';
+  div.innerHTML = `
+    <div style="font-size:11px;color:#f0b429;font-weight:700;margin-bottom:6px">🔧 パスワード生成ツール</div>
+    <input id="dev-pw" placeholder="設定したいパスワード" style="width:100%;background:#111;color:#fff;border:1px solid #444;border-radius:6px;padding:8px;font-size:13px;outline:none;margin-bottom:6px">
+    <button onclick="genHash()" style="width:100%;background:#f0b429;color:#000;border:none;border-radius:6px;padding:8px;font-weight:700;cursor:pointer;font-size:13px">ハッシュを生成</button>
+    <div id="dev-hash" style="font-size:10px;color:#aaa;margin-top:8px;word-break:break-all"></div>
+  `;
+  document.body.appendChild(div);
+}
+async function genHash() {
+  const pw = document.getElementById('dev-pw').value;
+  if (!pw) return;
+  const hash = await sha256(pw);
+  document.getElementById('dev-hash').innerHTML = `<b style="color:#fff">コピーしてpasswordHashに貼り付け:</b><br><code style="color:#f0b429">${hash}</code>`;
+}
+
+// ───────────────────────────────────────────
+// モーダル制御
+// ───────────────────────────────────────────
+function openPwModal(machineId) {
+  pendingMachineId = machineId;
+  const m = MACHINES.find(x => x.id === machineId);
+  document.getElementById('pw-modal-machine').textContent = `🔒 ${m?.name} はnoteで販売中のパスワードが必要です`;
+  document.getElementById('pw-input').value = '';
+  document.getElementById('pw-error').textContent = '';
+  document.getElementById('pw-modal').classList.add('active');
+  setTimeout(() => document.getElementById('pw-input').focus(), 100);
+}
+function closePwModal() {
+  document.getElementById('pw-modal').classList.remove('active');
+  document.getElementById('machine-select').value = '';
+  pendingMachineId = null;
+}
+async function checkPw() {
+  const input = document.getElementById('pw-input').value;
+  if (!input) { document.getElementById('pw-error').textContent = 'パスワードを入力してください'; return; }
+  const m = MACHINES.find(x => x.id === pendingMachineId);
+  if (!m) return;
+  const hash = await sha256(input);
+  if (hash === m.passwordHash) {
+    unlockedMachines.add(pendingMachineId);
+    document.getElementById('pw-modal').classList.remove('active');
+    const id = pendingMachineId;
+    pendingMachineId = null;
+    document.getElementById('machine-select').value = id;
+    activateMachine(id);
+  } else {
+    document.getElementById('pw-error').textContent = 'パスワードが違います';
+    document.getElementById('pw-input').select();
+  }
+}
+
+// ───────────────────────────────────────────
+// 初期化
+// ───────────────────────────────────────────
+function filterMachines() {
+  const q = document.getElementById('machine-search').value.trim().toLowerCase();
+  const sel = document.getElementById('machine-select');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">機種を選んでください</option>';
+  MACHINES.filter(m => m.name.toLowerCase().includes(q)).forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.locked ? `🔒 ${m.name}` : m.name;
+    if (m.id === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+window.onload = () => {
+  filterMachines();
+  const sel = document.getElementById('machine-select');
+  sel.addEventListener('change', onMachineChange);
+  initDevTool();
+  // 参考値タブは開発者モードのみ表示
+  if (!isDev) {
+    document.querySelector('.tab[onclick="switchTab(\'ref\')"]').style.display = 'none';
+    document.getElementById('tab-ref').style.display = 'none';
+  }
+};
+
+function onMachineChange() {
+  const id = document.getElementById('machine-select').value;
+  if (!id) { currentMachine = null; hideTabs(); return; }
+  const m = MACHINES.find(x => x.id === id);
+  // ロック済み かつ 未解除 かつ 開発者モードでない → モーダルを出す
+  if (m?.locked && !unlockedMachines.has(id) && !isDev) {
+    openPwModal(id);
+    return;
+  }
+  activateMachine(id);
+}
+
+function activateMachine(id) {
+  currentMachine = MACHINES.find(m => m.id === id);
+  if (id === 'custom') { showCustomBuilder(); return; }
+  showTabs();
+  renderElements();
+  renderRef();
+  recalc();
+}
+
+function showTabs() {
+  document.getElementById('tab-bar').style.display = 'flex';
+  document.getElementById('games-card').style.display = 'block';
+  document.getElementById('reset-btn').style.display = 'block';
+}
+function hideTabs() {
+  document.getElementById('tab-bar').style.display = 'none';
+  document.getElementById('games-card').style.display = 'none';
+  document.getElementById('elements-area').innerHTML = '';
+  document.getElementById('reset-btn').style.display = 'none';
+}
+
+// ───────────────────────────────────────────
+// タブ切り替え
+// ───────────────────────────────────────────
+let currentTab = 'input';
+function switchTab(tab) {
+  if (tab === 'ref' && !isDev) return;
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['input','result','ref'][i] === tab);
+  });
+  document.getElementById('tab-input').style.display = tab === 'input' ? 'block' : 'none';
+  document.getElementById('tab-result').style.display = tab === 'result' ? 'block' : 'none';
+  document.getElementById('tab-ref').style.display = tab === 'ref' ? 'block' : 'none';
+}
+
+// ───────────────────────────────────────────
+// 要素入力フォームのレンダリング
+// ───────────────────────────────────────────
+function renderElements() {
+  const area = document.getElementById('elements-area');
+  area.innerHTML = '';
+  if (!currentMachine) return;
+
+  currentMachine.elements.forEach(el => {
+    const div = document.createElement('div');
+    div.className = 'element-block';
+
+    if (el.type === 'select') {
+      // 演出選択型
+      const optionsHtml = el.options.map((opt, i) =>
+        `<option value="${i}">${opt.label}</option>`
+      ).join('');
+      div.innerHTML = `
+        <div class="element-name">${el.name}</div>
+        <div class="total-hint" style="margin-bottom:6px">${el.desc}</div>
+        <select id="select-${el.id}" onchange="recalc()" style="width:100%">
+          <option value="">── 選択してください ──</option>
+          ${optionsHtml}
+        </select>
+        ${el.note ? `<div class="total-hint" style="margin-top:6px;color:var(--accent)">💡 ${el.note}</div>` : ''}
+      `;
+    } else {
+      // カウント型（既存）
+      div.innerHTML = `
+        <div class="element-name">${el.name}</div>
+        <div class="input-row">
+          <input type="number" id="count-${el.id}" placeholder="回数" min="0" oninput="recalc()">
+          <span>回</span>
+          ${el.hasOwnTotal
+            ? `<span>/ <input type="number" id="total-${el.id}" placeholder="分母" min="0" style="width:80px;text-align:center;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 4px;font-size:14px;outline:none;" oninput="recalc()"> 回</span>`
+            : `<span>/ 総ゲーム数</span>`
+          }
+        </div>
+        <div class="total-hint">${el.desc}</div>
+      `;
+    }
+    area.appendChild(div);
+  });
+}
+
+// ───────────────────────────────────────────
+// ベイズ推定で設定確率を計算
+// ───────────────────────────────────────────
+function recalc() {
+  if (!currentMachine) return;
+
+  const totalGames = parseInt(document.getElementById('total-games').value) || 0;
+  const N_SETTINGS = 6;
+  // 対数尤度（log-likelihood）を設定1〜6で計算
+  const logLik = new Array(N_SETTINGS).fill(0);
+
+  let hasAnyData = false;
+
+  currentMachine.elements.forEach(el => {
+    if (el.type === 'select') {
+      // 演出選択型：選択された演出の確率ウェイトをlog尤度に加算
+      const sel = document.getElementById(`select-${el.id}`);
+      if (!sel || sel.value === '') return;
+      const optIdx = parseInt(sel.value);
+      const opt = el.options[optIdx];
+      if (!opt) return;
+      // uniformなら（スキップ選択）何もしない
+      if (opt.probs.every(p => p === 1)) return;
+      hasAnyData = true;
+      for (let s = 0; s < N_SETTINGS; s++) {
+        const p = Math.max(1e-9, opt.probs[s]);
+        logLik[s] += Math.log(p);
+      }
+      return;
+    }
+
+    // カウント型（既存）
+    const countEl = document.getElementById(`count-${el.id}`);
+    if (!countEl) return;
+    const count = parseInt(countEl.value);
+    if (isNaN(count) || count < 0) return;
+
+    let n;
+    if (el.hasOwnTotal) {
+      const totalEl = document.getElementById(`total-${el.id}`);
+      n = totalEl ? (parseInt(totalEl.value) || 0) : 0;
+    } else {
+      n = totalGames;
+    }
+    if (n <= 0) return;
+    hasAnyData = true;
+
+    for (let s = 0; s < N_SETTINGS; s++) {
+      const p = el.probs[s];
+      const clampedP = Math.max(1e-9, Math.min(1 - 1e-9, p));
+      logLik[s] += count * Math.log(clampedP) + (n - count) * Math.log(1 - clampedP);
+    }
+  });
+
+  if (!hasAnyData) {
+    renderResult([1/6, 1/6, 1/6, 1/6, 1/6, 1/6], false);
+    return;
+  }
+
+  // 数値安定化のため最大値を引いてexpして正規化
+  const maxLog = Math.max(...logLik);
+  const raw = logLik.map(l => Math.exp(l - maxLog));
+  const sum = raw.reduce((a, b) => a + b, 0);
+  const probs = raw.map(v => v / sum);
+
+  renderResult(probs, true);
+}
+
+// ───────────────────────────────────────────
+// 結果表示
+// ───────────────────────────────────────────
+const SETTING_COLORS = ['s1','s2','s3','s4','s5','s6'];
+const SETTING_NAMES = ['設定1','設定2','設定3','設定4','設定5','設定6'];
+
+function renderResult(probs, hasData) {
+  const area = document.getElementById('result-area');
+  const bestIdx = probs.indexOf(Math.max(...probs));
+  const bestPct = (probs[bestIdx] * 100).toFixed(1);
+
+  let html = '';
+
+  if (hasData) {
+    html += `
+      <div class="best-setting">
+        <div class="label">最有力設定</div>
+        <div class="value ${SETTING_COLORS[bestIdx]}">${SETTING_NAMES[bestIdx]}</div>
+        <div class="sub">確率 ${bestPct}%</div>
+      </div>
+    `;
+  }
+
+  html += '<div class="card-title">設定別確率</div>';
+
+  probs.forEach((p, i) => {
+    const pct = (p * 100).toFixed(1);
+    const barWidth = Math.round(p * 100);
+    html += `
+      <div class="result-block">
+        <div class="result-header">
+          <span class="setting-label ${SETTING_COLORS[i]}">${SETTING_NAMES[i]}</span>
+          <div class="bar-wrap"><div class="bar bar-${SETTING_COLORS[i]}" style="width:${barWidth}%"></div></div>
+          <span class="pct-label ${SETTING_COLORS[i]}">${pct}%</span>
+        </div>
+      </div>
+    `;
+  });
+
+  if (!hasData) {
+    html += `<div class="tip">データを入力すると設定確率が表示されます。<br>入力は0でもOK（0回数として計算します）。</div>`;
+  }
+
+  area.innerHTML = html;
+  area.className = 'card';
+}
+
+// ───────────────────────────────────────────
+// 参考値テーブル
+// ───────────────────────────────────────────
+function renderRef() {
+  const area = document.getElementById('ref-area');
+  if (!currentMachine || currentMachine.elements.length === 0) {
+    area.innerHTML = '<div class="no-data">機種を選択してください</div>';
+    return;
+  }
+
+  let html = `<div class="card-title">設定差データ（目安）</div>`;
+
+  currentMachine.elements.forEach(el => {
+    html += `<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--accent)">${el.name}</div>`;
+    if (el.type === 'select') {
+      // 演出選択型：選択肢と設定別ウェイトを表示
+      html += `<table class="ref-table"><tr><th>選択肢</th>`;
+      for (let s = 1; s <= 6; s++) html += `<th class="${SETTING_COLORS[s-1]}">設${s}</th>`;
+      html += `</tr>`;
+      el.options.filter(o => !o.probs.every(p => p === 1)).forEach(opt => {
+        html += `<tr><td style="text-align:left;padding:4px 6px;font-size:10px">${opt.label}</td>`;
+        opt.probs.forEach((p, i) => {
+          const display = p < 0.01 ? '極低' : (p * 100).toFixed(0) + '%';
+          html += `<td class="${SETTING_COLORS[i]}">${display}</td>`;
+        });
+        html += `</tr>`;
+      });
+      html += `</table>`;
+      if (el.note) html += `<div style="font-size:10px;color:var(--accent);margin-top:4px">💡 ${el.note}</div>`;
+    } else {
+      // カウント型
+      html += `<table class="ref-table"><tr><th>設定</th>`;
+      for (let s = 1; s <= 6; s++) html += `<th class="${SETTING_COLORS[s-1]}">設定${s}</th>`;
+      html += `</tr><tr><td style="color:var(--text2)">確率</td>`;
+      el.probs.forEach((p, i) => {
+        const display = p >= 0.01 ? (p * 100).toFixed(2) + '%' : '1/' + Math.round(1/p);
+        html += `<td class="${SETTING_COLORS[i]}">${display}</td>`;
+      });
+      html += `</tr></table>`;
+    }
+    html += `</div>`;
+  });
+
+  html += `<div class="tip">※数値はあくまで目安です。機種・バージョンによって異なる場合があります。最新の攻略情報と合わせてご確認ください。</div>`;
+  area.innerHTML = html;
+}
+
+// ───────────────────────────────────────────
+// カスタム機種ビルダー
+// ───────────────────────────────────────────
+function showCustomBuilder() {
+  const area = document.getElementById('elements-area');
+  area.innerHTML = `
+    <div class="card">
+      <div class="card-title">⚙️ カスタム機種設定</div>
+      <div id="custom-elements"></div>
+      <button onclick="addCustomElement()" style="width:100%;padding:10px;background:var(--accent);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;margin-top:8px;font-size:14px">＋ 設定差要素を追加</button>
+      <button onclick="applyCustom()" style="width:100%;padding:10px;background:#2ecc71;color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;margin-top:8px;font-size:14px">✓ この設定で判別を開始</button>
+    </div>
+  `;
+  showTabs();
+  document.getElementById('games-card').style.display = 'block';
+}
+
+let customCount = 0;
+function addCustomElement() {
+  const id = 'custom_' + (customCount++);
+  const div = document.createElement('div');
+  div.id = 'ce-' + id;
+  div.className = 'element-block';
+  div.innerHTML = `
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <input type="text" id="cname-${id}" placeholder="要素名（例: チェリー）" style="flex:1;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:13px;outline:none">
+      <button onclick="document.getElementById('ce-${id}').remove()" style="background:var(--s1);color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer">削除</button>
+    </div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:6px">設定1〜6の確率を入力（例: 1/27.3 または 0.0366）</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+      ${[1,2,3,4,5,6].map(s => `
+        <div>
+          <div style="font-size:10px;color:${['var(--s1)','var(--s2)','var(--s3)','var(--s4)','var(--s5)','var(--s6)'][s-1]};margin-bottom:2px">設定${s}</div>
+          <input type="text" id="cp${s}-${id}" placeholder="1/27.3" style="width:100%;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:7px;font-size:12px;outline:none;text-align:center">
+        </div>
+      `).join('')}
+    </div>
+  `;
+  document.getElementById('custom-elements').appendChild(div);
+}
+
+function parseProbInput(val) {
+  val = val.trim();
+  if (!val) return null;
+  if (val.includes('/')) {
+    const parts = val.split('/');
+    if (parts.length === 2) return parseFloat(parts[0]) / parseFloat(parts[1]);
+  }
+  return parseFloat(val);
+}
+
+function applyCustom() {
+  const elems = [];
+  let valid = true;
+  document.querySelectorAll('[id^="ce-custom_"]').forEach(div => {
+    const id = div.id.replace('ce-', '');
+    const name = document.getElementById('cname-' + id)?.value || '要素';
+    const probs = [];
+    for (let s = 1; s <= 6; s++) {
+      const val = document.getElementById(`cp${s}-${id}`)?.value || '';
+      const p = parseProbInput(val);
+      if (p === null || isNaN(p)) { alert(`「${name}」の設定${s}の確率が未入力です`); valid = false; return; }
+      probs.push(p);
+    }
+    if (!valid) return;
+    elems.push({ id: id, name: name, desc: name + '回数', probs: probs });
+  });
+  if (!valid || elems.length === 0) { alert('少なくとも1つの要素を追加してください'); return; }
+
+  currentMachine = { id: 'custom_applied', name: 'カスタム機種', elements: elems };
+  renderElements();
+  renderRef();
+  recalc();
+  switchTab('input');
+}
+
+// ───────────────────────────────────────────
+// リセット
+// ───────────────────────────────────────────
+function resetAll() {
+  document.getElementById('total-games').value = '';
+  if (!currentMachine) return;
+  currentMachine.elements.forEach(el => {
+    if (el.type === 'select') {
+      const s = document.getElementById('select-' + el.id);
+      if (s) s.value = '';
+    } else {
+      const c = document.getElementById('count-' + el.id);
+      if (c) c.value = '';
+      if (el.hasOwnTotal) {
+        const t = document.getElementById('total-' + el.id);
+        if (t) t.value = '';
+      }
+    }
+  });
+  recalc();
+}
+</script>
+</body>
+</html>
